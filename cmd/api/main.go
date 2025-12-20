@@ -38,11 +38,11 @@ func main() {
 	// 	robotallot.InitAutoUserStrategyExpire(ctx)
 	// }()
 
-	// wg.Add(1)
-	// go func() {
-	// 	defer wg.Done()
-	// 	robotallot.InitAutoKeepAliveRobot(ctx)
-	// }()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		// robotallot.InitAutoKeepAliveRobot(ctx)
+	}()
 
 	// 等待中断信号以优雅地关闭服务器（设置5秒的超时时间）
 	<-ctx.Done()
