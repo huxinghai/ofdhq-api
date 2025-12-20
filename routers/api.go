@@ -42,6 +42,8 @@ func InitApiRouter() *gin.Engine {
 			topicNotNeedAuth.GET("detail", validatorFactory.Create(consts.ValidatorPrefix+"TopicDetail"))
 		}
 
+		vApi.POST("customer/create", validatorFactory.Create(consts.ValidatorPrefix+"CustomerCreate"))
+
 		//----------------------- 需要登录态接口 ----------------------
 		// vApi.Use(authorization.CheckTokenAuth())
 	}

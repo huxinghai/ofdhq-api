@@ -4,6 +4,7 @@ import (
 	"ofdhq-api/app/core/container"
 	"ofdhq-api/app/global/consts"
 	"ofdhq-api/app/http/validator/admins"
+	"ofdhq-api/app/http/validator/api"
 	"ofdhq-api/app/http/validator/api/topic"
 )
 
@@ -20,6 +21,8 @@ func ApiRegisterValidator() {
 	containers.Set(key, topic.List{})
 	key = consts.ValidatorPrefix + "TopicDetail"
 	containers.Set(key, topic.Detail{})
+	key = consts.ValidatorPrefix + "CustomerCreate"
+	containers.Set(key, api.Customer{})
 
 	//==========================================================  管理后台
 	key = consts.ValidatorPrefix + "AdminUserLogin"
@@ -32,6 +35,8 @@ func ApiRegisterValidator() {
 	containers.Set(key, admins.UserUpdatePassword{})
 	key = consts.ValidatorPrefix + "AdminAdminUserList"
 	containers.Set(key, admins.AdminUserList{})
+	key = consts.ValidatorPrefix + "AdminCustomerList"
+	containers.Set(key, admins.AdminCustomerList{})
 
 	key = consts.ValidatorPrefix + "AdminTopicCreate"
 	containers.Set(key, admins.AdminTopicCreate{})

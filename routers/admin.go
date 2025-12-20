@@ -25,5 +25,7 @@ func InitAdminApiRouter(router *gin.Engine) {
 			topic.POST("update", validatorFactory.Create(consts.ValidatorPrefix+"AdminTopicUpdate"))
 			topic.GET("list", validatorFactory.Create(consts.ValidatorPrefix+"AdminTopicList"))
 		}
+
+		vApi.GET("customer/list", validatorFactory.Create(consts.ValidatorPrefix+"AdminCustomerList"))
 	}
 }

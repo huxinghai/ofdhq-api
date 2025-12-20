@@ -90,3 +90,23 @@ func (l AdminTopicDelete) CheckParams(ctx *gin.Context) {
 		(&admin.Topic{}).Delete(extraContext)
 	}
 }
+
+type AdminCustomerList struct {
+	common_data_type.Page
+}
+
+func (l AdminCustomerList) CheckParams(ctx *gin.Context) {
+	l.Page.SetDefault()
+	if err := ctx.ShouldBind(&l); err != nil {
+		response.ValidatorError(ctx, err)
+		return
+	}
+
+	extraContext := data_transfer.DataAddContext(l, consts.ValidatorPrefix, ctx)
+	if extraContext == nil {
+		response.ErrorSystem(ctx, "json 化失败", "")
+		return
+	} else {
+		(&admin.Customer{}).GetList(extraContext)
+	}
+}

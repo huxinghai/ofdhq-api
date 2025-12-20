@@ -131,17 +131,18 @@ func (u *AdminUsers) UpdatePassword(context *gin.Context) {
 }
 
 func (u *AdminUsers) List(ctx *gin.Context) {
-	page := int64(ctx.GetFloat64(consts.ValidatorPrefix + "page"))
-	limit := int64(ctx.GetFloat64(consts.ValidatorPrefix + "limit"))
+	page := int(ctx.GetFloat64(consts.ValidatorPrefix + "page"))
+	limit := int(ctx.GetFloat64(consts.ValidatorPrefix + "limit"))
 
-	result, err := model.CreateAdminUserFactory().List(page, limit)
+	result, err := model.CreateAdminUserFactory().List(int64(page), int64(limit))
 	if err != nil {
 		variable.ZapLog.Error("更新数据失败！", zap.Error(err))
 		response.Fail(ctx, consts.ServerOccurredErrorCode, consts.ServerOccurredErrorMsg, "")
 		return
 	}
 
-	response.Success(ctx, consts.CurdStatusOkMsg, gin.H{"counts": len(result), "list": result})
+	pageInfo := response.GenPageInfo(page, limit, len(result))
+	response.Success(ctx, consts.CurdStatusOkMsg, gin.H{"page_info": pageInfo, "counts": len(result), "list": result})
 }
 
 func (u *AdminUsers) buildCurrentUser(ctx *gin.Context) (*model.AdminUsers, error) {
