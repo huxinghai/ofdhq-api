@@ -1,0 +1,10 @@
+/.idea/
+.idea/
+.idea
+/storage/logs/*
+/storage/uploaded/*
+/public/storage
+/config/config.yml
+/config/gorm_v2.yml
+/bin
+/database/*
