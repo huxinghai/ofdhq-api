@@ -55,6 +55,10 @@ func (t *Topic) Detail(ctx *gin.Context) {
 		response.Fail(ctx, consts.TopicGetDetailErrorCode, consts.TopicGetDetailErrorMsg, "")
 		return
 	} else {
+		if topic == nil {
+			response.Fail(ctx, consts.TopicGetDetailErrorCode, consts.TopicGetDetailErrorMsg, "")
+			return
+		}
 		result := &models.Topic{
 			Topic: topic,
 			User: &models.User{

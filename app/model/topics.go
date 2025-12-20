@@ -115,6 +115,9 @@ func (t *TopicModel) GetById(id int64) (*TopicModel, error) {
 	tmp := &TopicModel{}
 	result := t.Raw(sqlstr, id).Find(tmp)
 	if result.Error == nil {
+		if result.RowsAffected <= 0 {
+			return nil, nil
+		}
 		return tmp, nil
 	} else {
 		return nil, errors.Join(result.Error, fmt.Errorf("TopicModel.GetById 查询失败"))
