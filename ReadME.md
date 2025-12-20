@@ -18,6 +18,4 @@ kill -2 pid
 ```
 
 
-git@gitee.com:mingruiwei/ez-qt.git
-
-git@gitee.com:mingruiwei/ez-qt-admin.git
+git@github.com:huxinghai/ofdhq-api.git
