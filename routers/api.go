@@ -35,7 +35,6 @@ func InitApiRouter() *gin.Engine {
 
 	vApi := router.Group("/api/v1/")
 	{
-
 		topicNotNeedAuth := vApi.Group("topic/")
 		{
 			topicNotNeedAuth.GET("list", validatorFactory.Create(consts.ValidatorPrefix+"TopicList"))

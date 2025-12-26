@@ -17,6 +17,7 @@ func InitAdminApiRouter(router *gin.Engine) {
 		vApi.POST("update_user", validatorFactory.Create(consts.ValidatorPrefix+"AdminAdminUserUpdate"))
 		vApi.POST("update_user_password", validatorFactory.Create(consts.ValidatorPrefix+"AdminUserUpdatePassword"))
 		vApi.GET("list_user", validatorFactory.Create(consts.ValidatorPrefix+"AdminAdminUserList"))
+		vApi.POST("upload/file", validatorFactory.Create(consts.ValidatorPrefix+"AdminUploadFile"))
 
 		topic := vApi.Group("topic/")
 		{

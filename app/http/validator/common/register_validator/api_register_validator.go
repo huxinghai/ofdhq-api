@@ -37,6 +37,8 @@ func ApiRegisterValidator() {
 	containers.Set(key, admins.AdminUserList{})
 	key = consts.ValidatorPrefix + "AdminCustomerList"
 	containers.Set(key, admins.AdminCustomerList{})
+	key = consts.ValidatorPrefix + "AdminUploadFile"
+	containers.Set(key, admins.UploadFile{})
 
 	key = consts.ValidatorPrefix + "AdminTopicCreate"
 	containers.Set(key, admins.AdminTopicCreate{})

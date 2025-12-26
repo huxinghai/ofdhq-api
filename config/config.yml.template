@@ -11,10 +11,6 @@ HttpServer:
       - "192.168.10.1"             # nginx 代理服务器ip地址
       - "192.168.10.2"
 
-EZBase:
-  Host: "http://43.163.219.241"
-  SecretKey: "YDjP1KQs6owGZCxm1ill2eL7YqvedPdpd9tQmO5vOSk="
-
 Token:
   JwtTokenSignKey: "ofdhq-api"    #设置token生成时加密的签名
   JwtTokenOnlineUsers: 5           #一个账号密码允许最大获取几个有效的token，当超过这个值，第一次获取的token的账号、密码就会失效
@@ -150,3 +146,10 @@ Captcha:
   captchaValue: "captcha_value"   #验证码值提交时的键名
   length: 4   # 验证码生成时的长度
 
+
+Aliyun:
+  access_key_id: ******
+  access_key_secret: ************
+  bucket: ******
+  area: cn-hangzhou
+  host: https://***.oss-cn-hangzhou.aliyuncs.com
