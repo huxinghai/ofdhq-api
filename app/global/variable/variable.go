@@ -53,7 +53,7 @@ var (
 	Enforcer *casbin.SyncedEnforcer
 
 	//  用户自行定义其他全局变量 ↓
-	DefaultAvatar = "https://assets-ezqtef.s3.ap-northeast-1.amazonaws.com/assets/2023_12/7f1d7aa0-bavatar-default.png"
+	DefaultAvatar = "https://ofdhq.oss-cn-shenzhen.aliyuncs.com/assets/2025_12/unnamed.jpg"
 
 	UserRobotDeleteLockKey = "user_robot:delete"
 )

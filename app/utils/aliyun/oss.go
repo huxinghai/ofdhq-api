@@ -38,7 +38,7 @@ func UploadFileOSS(uploadFile *multipart.FileHeader) (string, error) {
 	bucketName := variable.ConfigYml.GetString("Aliyun.bucket")
 	host := variable.ConfigYml.GetString("Aliyun.host")
 
-	client, err := oss.New("http://oss-cn-hangzhou.aliyuncs.com", accessKeyID, accessKeySecret)
+	client, err := oss.New("http://oss-cn-shenzhen.aliyuncs.com", accessKeyID, accessKeySecret)
 	if err != nil {
 		return "", fmt.Errorf("aliyun oss.New err:%v", err)
 	}
