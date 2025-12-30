@@ -42,6 +42,7 @@ func InitApiRouter() *gin.Engine {
 		}
 
 		vApi.POST("customer/create", validatorFactory.Create(consts.ValidatorPrefix+"CustomerCreate"))
+		vApi.POST("upload/file", validatorFactory.Create(consts.ValidatorPrefix+"UserUploadFile"))
 
 		//----------------------- 需要登录态接口 ----------------------
 		// vApi.Use(authorization.CheckTokenAuth())
