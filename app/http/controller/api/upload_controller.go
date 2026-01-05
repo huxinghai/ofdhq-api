@@ -32,7 +32,7 @@ func (t *Upload) Upload(ctx *gin.Context) {
 		return
 	}
 
-	urlPath, err := aliyun.UploadFileOSS(tmpFile)
+	urlPath, err := aliyun.UploadFileOSS(tmpFile, 1)
 	if err != nil {
 		variable.ZapLog.Error("aliyun.UploadFileOSS 失败", zap.Error(err))
 		response.Fail(ctx, consts.FilesUploadFailCode, "上传文件失败", nil)

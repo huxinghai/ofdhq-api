@@ -1,10 +1,14 @@
 package test
 
 import (
+	"fmt"
 	"ofdhq-api/app/global/variable"
 	_ "ofdhq-api/bootstrap" //  为了保证单元测试与正常启动效果一致，记得引入该包
 	"testing"
+	"time"
 
+	"github.com/aliyun/aliyun-oss-go-sdk/oss"
+	"github.com/google/uuid"
 	"github.com/qifengzhang007/goCurl"
 )
 
@@ -44,4 +48,43 @@ func TestPprof(t *testing.T) {
 			t.Log(err.Error())
 		}
 	}
+}
+
+func TestUploadFile(t *testing.T) {
+	curYearMonth := time.Now().Format("2006_01")
+
+	newUUID := uuid.New()
+
+	key := newUUID.String()
+	if len(key) > 10 {
+		key = key[:10]
+	}
+
+	path := "assets/" + curYearMonth + "/" + key + "test.jpg"
+
+	accessKeyID := variable.ConfigYml.GetString("Aliyun.access_key_id")
+	accessKeySecret := variable.ConfigYml.GetString("Aliyun.access_key_secret")
+	bucketName := variable.ConfigYml.GetString("Aliyun.bucketweb")
+
+	// host := variable.ConfigYml.GetString("Aliyun.host")
+
+	client, err := oss.New("http://oss-cn-shenzhen.aliyuncs.com", accessKeyID, accessKeySecret)
+	if err != nil {
+		t.Errorf("aliyun oss.New err:%v", err)
+		return
+	}
+
+	bucket, err := client.Bucket(bucketName)
+	if err != nil {
+		t.Errorf("client.Bucket err:%v", err)
+		return
+	}
+
+	err = bucket.PutObjectFromFile(path, "/Users/edy/Downloads/unnamed.jpg")
+	if err != nil {
+		t.Errorf("bucket.PutObjectFromFile err:%v, path:%+v", err, path)
+		return
+	}
+
+	fmt.Printf("完成 \n")
 }

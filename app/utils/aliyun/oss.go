@@ -11,7 +11,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func UploadFileOSS(uploadFile *multipart.FileHeader) (string, error) {
+func UploadFileOSS(uploadFile *multipart.FileHeader, bucketType int32) (string, error) {
 	if uploadFile == nil {
 		return "", fmt.Errorf("uploadFile is nil")
 	}
@@ -36,6 +36,10 @@ func UploadFileOSS(uploadFile *multipart.FileHeader) (string, error) {
 	accessKeyID := variable.ConfigYml.GetString("Aliyun.access_key_id")
 	accessKeySecret := variable.ConfigYml.GetString("Aliyun.access_key_secret")
 	bucketName := variable.ConfigYml.GetString("Aliyun.bucket")
+	if bucketType == 1 {
+		bucketName = variable.ConfigYml.GetString("Aliyun.bucketweb")
+	}
+
 	host := variable.ConfigYml.GetString("Aliyun.host")
 
 	client, err := oss.New("http://oss-cn-shenzhen.aliyuncs.com", accessKeyID, accessKeySecret)
