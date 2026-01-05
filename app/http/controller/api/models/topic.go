@@ -12,11 +12,12 @@ type User struct {
 }
 
 type TopicBasic struct {
-	ID        int64  `json:"id"`
-	Title     string `json:"title"` // 标题
-	Body      string `json:"body"`  // 内容
-	BodyHtml  string `json:"body_html"`
-	ImgUrl    string `json:"img_url"`
-	Flag      int    `json:"flag"` // 状态：0-无效，1-有效
-	CreatedAt string `json:"created_at"`
+	ID          int64  `json:"id"`
+	Title       string `json:"title"` // 标题
+	Body        string `json:"body"`  // 内容
+	BodyHtml    string `json:"body_html"`
+	Description string `json:"description"`
+	ImgUrl      string `json:"img_url"`
+	Flag        int    `json:"flag"` // 状态：0-无效，1-有效
+	CreatedAt   string `json:"created_at"`
 }

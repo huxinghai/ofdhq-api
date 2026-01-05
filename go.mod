@@ -23,6 +23,7 @@ require (
 	github.com/shopspring/decimal v1.3.1
 	github.com/spf13/viper v1.16.0
 	go.uber.org/zap v1.25.0
+	golang.org/x/net v0.17.0
 	gorm.io/driver/mysql v1.5.1
 	gorm.io/driver/postgres v1.5.2
 	gorm.io/driver/sqlserver v1.5.1
@@ -71,11 +72,9 @@ require (
 	github.com/tidwall/pretty v1.2.0 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.2.11 // indirect
-	github.com/yuin/goldmark v1.7.14 // indirect
 	go.uber.org/multierr v1.10.0 // indirect
 	golang.org/x/arch v0.3.0 // indirect
 	golang.org/x/crypto v0.14.0 // indirect
-	golang.org/x/net v0.17.0 // indirect
 	golang.org/x/sys v0.13.0 // indirect
 	golang.org/x/text v0.13.0 // indirect
 	golang.org/x/time v0.1.0 // indirect

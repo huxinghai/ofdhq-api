@@ -1,16 +1,17 @@
 package api
 
 import (
-	"bytes"
 	"ofdhq-api/app/global/consts"
 	"ofdhq-api/app/global/variable"
 	"ofdhq-api/app/http/controller/api/models"
 	"ofdhq-api/app/service/topic"
 	"ofdhq-api/app/utils/response"
+	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/yuin/goldmark"
+	"github.com/russross/blackfriday/v2"
 	"go.uber.org/zap"
+	"golang.org/x/net/html"
 )
 
 type Topic struct {
@@ -36,21 +37,20 @@ func (t *Topic) GetListByCategoryAndShowType(ctx *gin.Context) {
 
 	result := make([]*models.Topic, 0, len(list))
 	for _, l := range list {
-		var buf bytes.Buffer
-		if err := goldmark.Convert([]byte(l.Body), &buf); err != nil {
-			response.Fail(ctx, consts.TopicGetListErrorCode, consts.TopicGetListErrorMsg, "渲染markdown失败")
-			return
-		}
+		html := string(blackfriday.Run([]byte(l.Body)))
+
+		description := extractText(html)
 
 		result = append(result, &models.Topic{
 			Topic: &models.TopicBasic{
-				ID:        l.Id,
-				Title:     l.Title,
-				Body:      l.Body,
-				BodyHtml:  buf.String(),
-				ImgUrl:    l.ImgUrl,
-				Flag:      l.Flag,
-				CreatedAt: l.CreatedAt,
+				ID:          l.Id,
+				Title:       l.Title,
+				Body:        l.Body,
+				BodyHtml:    html,
+				Description: description,
+				ImgUrl:      l.ImgUrl,
+				Flag:        l.Flag,
+				CreatedAt:   l.CreatedAt,
 			},
 			User: &models.User{
 				ID:        l.AdminUserID,
@@ -75,20 +75,17 @@ func (t *Topic) Detail(ctx *gin.Context) {
 			response.Fail(ctx, consts.TopicGetDetailErrorCode, consts.TopicGetDetailErrorMsg, "")
 			return
 		}
-		var buf bytes.Buffer
-		if err := goldmark.Convert([]byte(topic.Body), &buf); err != nil {
-			response.Fail(ctx, consts.TopicGetListErrorCode, consts.TopicGetListErrorMsg, "渲染markdown失败")
-			return
-		}
+		html := string(blackfriday.Run([]byte(topic.Body)))
 		result := &models.Topic{
 			Topic: &models.TopicBasic{
-				ID:        topic.Id,
-				Title:     topic.Title,
-				Body:      topic.Body,
-				BodyHtml:  buf.String(),
-				ImgUrl:    topic.ImgUrl,
-				Flag:      topic.Flag,
-				CreatedAt: topic.CreatedAt,
+				ID:          topic.Id,
+				Title:       topic.Title,
+				Body:        topic.Body,
+				BodyHtml:    html,
+				ImgUrl:      topic.ImgUrl,
+				Description: "",
+				Flag:        topic.Flag,
+				CreatedAt:   topic.CreatedAt,
 			},
 			User: &models.User{
 				ID:        topic.AdminUserID,
@@ -96,6 +93,28 @@ func (t *Topic) Detail(ctx *gin.Context) {
 				AvatarUrl: variable.DefaultAvatar,
 			},
 		}
+		result.Topic.Description = extractText(result.Topic.BodyHtml)
 		response.Success(ctx, consts.CurdStatusOkMsg, result)
 	}
+}
+
+func extractText(htmlStr string) string {
+	doc, err := html.Parse(strings.NewReader(htmlStr))
+	if err != nil {
+		return ""
+	}
+
+	var buf strings.Builder
+	var f func(*html.Node)
+	f = func(n *html.Node) {
+		if n.Type == html.TextNode {
+			buf.WriteString(n.Data)
+		}
+		for c := n.FirstChild; c != nil; c = c.NextSibling {
+			f(c)
+		}
+	}
+	f(doc)
+
+	return strings.Join(strings.Fields(buf.String()), " ")
 }
