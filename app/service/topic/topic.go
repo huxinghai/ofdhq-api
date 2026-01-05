@@ -89,14 +89,19 @@ func (t *Service) Update(id int64, title, body string) (*model.TopicModel, error
 		return nil, errors.Join(err, fmt.Errorf("查询数据失败！%d", id))
 	}
 
+	if topic == nil {
+		return nil, errors.Join(err, fmt.Errorf("查询数据为空 %d", id))
+	}
+
 	topic.Title = title
 	topic.Body = body
 	topic.ImgUrl = extractFirstImageLink(body)
 	topic.UpdatedAt = variable.NowTimeSH().Format(variable.DateFormat)
+	topic.Flag = 1
 
-	err = model.NewTopicFactory(topic).Update()
-	if err != nil {
-		return nil, errors.Join(err, fmt.Errorf("更新topic 失败！%+v", topic))
+	tt := model.NewTopicFactory(topic).Save(topic)
+	if tt.Error != nil {
+		return nil, errors.Join(tt.Error, fmt.Errorf("更新topic 失败！%+v", topic))
 	}
 	return topic, nil
 }

@@ -23,6 +23,8 @@ func ApiRegisterValidator() {
 	containers.Set(key, topic.Detail{})
 	key = consts.ValidatorPrefix + "CustomerCreate"
 	containers.Set(key, api.Customer{})
+	key = consts.ValidatorPrefix + "UserUploadFile"
+	containers.Set(key, api.UserUploadFile{})
 
 	//==========================================================  管理后台
 	key = consts.ValidatorPrefix + "AdminUserLogin"

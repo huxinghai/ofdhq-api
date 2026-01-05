@@ -31,3 +31,10 @@ func (l Customer) CheckParams(ctx *gin.Context) {
 		(&api.Customers{}).Create(extraContext)
 	}
 }
+
+type UserUploadFile struct {
+}
+
+func (u UserUploadFile) CheckParams(context *gin.Context) {
+	(&api.Upload{}).Upload(context)
+}
