@@ -89,7 +89,7 @@ var topicColumnTemplate = "`id`, `admin_user_id`, `title`, `body`, `img_url`,`cr
 
 func (t *TopicModel) GetAll(page, limit int) ([]*TopicModel, error) {
 	limitStart := (page - 1) * limit
-	sqlstr := "SELECT " + topicColumnTemplate + " FROM `topics` WHERE flag=1 LIMIT ?,?"
+	sqlstr := "SELECT " + topicColumnTemplate + " FROM `topics` WHERE flag=1 order by created_at desc LIMIT ?,?"
 	tmp := make([]*TopicModel, 0)
 	result := t.Raw(sqlstr, limitStart, limit).Find(&tmp)
 	if result.Error == nil {
