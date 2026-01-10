@@ -13,7 +13,7 @@ import (
 type Upload struct {
 }
 
-const maxSize = 1 * 1024 * 1024 // 1MB
+const maxSize = 1 * 1024 * 1024 // 2MB
 
 func (t *Upload) Upload(ctx *gin.Context) {
 	tmpFile, err := ctx.FormFile("file")

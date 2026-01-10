@@ -154,3 +154,4 @@ Aliyun:
   bucketweb: *****
   area: cn-hangzhou
   host: https://***.oss-cn-hangzhou.aliyuncs.com
+  web_host: https://***.oss-cn-hangzhou.aliyuncs.com

@@ -33,14 +33,14 @@ func UploadFileOSS(uploadFile *multipart.FileHeader, bucketType int32) (string, 
 
 	path := "assets/" + curYearMonth + "/" + key + uploadFile.Filename
 
+	host := variable.ConfigYml.GetString("Aliyun.host")
 	accessKeyID := variable.ConfigYml.GetString("Aliyun.access_key_id")
 	accessKeySecret := variable.ConfigYml.GetString("Aliyun.access_key_secret")
 	bucketName := variable.ConfigYml.GetString("Aliyun.bucket")
 	if bucketType == 1 {
 		bucketName = variable.ConfigYml.GetString("Aliyun.bucketweb")
+		host = variable.ConfigYml.GetString("Aliyun.web_host")
 	}
-
-	host := variable.ConfigYml.GetString("Aliyun.host")
 
 	client, err := oss.New("http://oss-cn-shenzhen.aliyuncs.com", accessKeyID, accessKeySecret)
 	if err != nil {
