@@ -40,12 +40,12 @@ func (t *Service) DeleteTopicByID(id int64) error {
 	return t.TopicModel.DeleteById(id)
 }
 
-func (t *Service) GetAllList(page, limit int) ([]*model.TopicModel, error) {
-	return t.TopicModel.GetAll(page, limit)
+func (t *Service) GetAllListByLang(lang string, page, limit int) ([]*model.TopicModel, error) {
+	return t.TopicModel.GetAll(lang, page, limit)
 }
 
-func (t *Service) GetCount() (int64, error) {
-	return t.TopicModel.GetCount()
+func (t *Service) GetCountByLang(lang string) (int64, error) {
+	return t.TopicModel.GetCount(lang)
 }
 
 func (t *Service) GetListByUser(userID int64, page, limit int64) (totalCount int64, list []*model.TopicModel, err error) {
@@ -63,8 +63,9 @@ func (t *Service) GetListByUser(userID int64, page, limit int64) (totalCount int
 	return count, list, nil
 }
 
-func (t *Service) Create(title, body string, adminUserID int64) (int64, error) {
+func (t *Service) Create(lang, title, body string, adminUserID int64) (int64, error) {
 	topic := &model.TopicModel{
+		Lang:        lang,
 		Title:       title,
 		Body:        body,
 		AdminUserID: adminUserID,

@@ -8,6 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
+	"gorm.io/gorm/utils"
 )
 
 type Topic struct {
@@ -19,13 +20,13 @@ func (t *Topic) GetListByCategoryAndShowType(ctx *gin.Context) {
 
 	fact := topic.CreateTopicFactory()
 
-	list, err := fact.GetAllList(page, pageSize)
+	list, err := fact.GetAllListByLang("", page, pageSize)
 	if err != nil {
 		variable.ZapLog.Error("查询数据失败", zap.Error(err))
 		response.Fail(ctx, consts.TopicGetListErrorCode, consts.TopicGetListErrorMsg, "")
 		return
 	}
-	count, err := fact.GetCount()
+	count, err := fact.GetCountByLang("")
 	if err != nil {
 		variable.ZapLog.Error("查询数据失败", zap.Error(err))
 		response.Fail(ctx, consts.TopicGetListErrorCode, consts.TopicGetListErrorMsg, "")
@@ -37,6 +38,7 @@ func (t *Topic) GetListByCategoryAndShowType(ctx *gin.Context) {
 }
 
 func (t *Topic) Create(ctx *gin.Context) {
+	lang := ctx.GetString(consts.ValidatorPrefix + "lang")
 	title := ctx.GetString(consts.ValidatorPrefix + "title")
 	body := ctx.GetString(consts.ValidatorPrefix + "body")
 	adminUser, err := (&AdminUsers{}).buildCurrentUser(ctx)
@@ -44,7 +46,11 @@ func (t *Topic) Create(ctx *gin.Context) {
 		response.Fail(ctx, consts.TopicCreatedErrorCode, consts.TopicCreatedErrorMsg, "")
 		return
 	}
-	id, err := topic.CreateTopicFactory().Create(title, body, adminUser.Id)
+	if !utils.Contains([]string{"EN", "ZH"}, lang) {
+		response.Fail(ctx, consts.TopicCreatedErrorCode, consts.TopicCreatedErrorMsg, "多语言传入参数有误！需要传入：EN、ZH")
+		return
+	}
+	id, err := topic.CreateTopicFactory().Create(lang, title, body, adminUser.Id)
 	if err != nil {
 		response.Fail(ctx, consts.TopicCreatedErrorCode, consts.TopicCreatedErrorMsg, "")
 		return
