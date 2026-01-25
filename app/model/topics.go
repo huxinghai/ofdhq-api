@@ -24,6 +24,7 @@ func NewTopicFactory(sc *TopicModel) *TopicModel {
 type TopicModel struct {
 	BaseModel
 	AdminUserID int64  `json:"admin_user_id"` // 作者 ID
+	Lang        string `json:"lang"`          // 语言
 	Title       string `json:"title"`         // 标题
 	Body        string `json:"body"`          // 内容
 	ImgUrl      string `json:"img_url"`
@@ -85,13 +86,20 @@ func (t *TopicModel) UpdateById(id int64, title, body string) error {
 	}
 }
 
-var topicColumnTemplate = "`id`, `admin_user_id`, `title`, `body`, `img_url`,`created_at`, `updated_at`"
+var topicColumnTemplate = "`id`, `admin_user_id`, `title`, `lang`, `body`, `img_url`,`created_at`, `updated_at`"
 
-func (t *TopicModel) GetAll(page, limit int) ([]*TopicModel, error) {
+func (t *TopicModel) GetAll(lang string, page, limit int) ([]*TopicModel, error) {
 	limitStart := (page - 1) * limit
-	sqlstr := "SELECT " + topicColumnTemplate + " FROM `topics` WHERE flag=1 order by created_at desc LIMIT ?,?"
+	sqlstr := "SELECT " + topicColumnTemplate + " FROM `topics` WHERE flag=1 "
+	args := make([]interface{}, 0)
+	if len(lang) > 0 {
+		sqlstr += " and lang=?"
+		args = append(args, lang)
+	}
+	sqlstr += " order by created_at desc LIMIT ?,?"
+	args = append(args, limitStart, limit)
 	tmp := make([]*TopicModel, 0)
-	result := t.Raw(sqlstr, limitStart, limit).Find(&tmp)
+	result := t.Raw(sqlstr, args...).Find(&tmp)
 	if result.Error == nil {
 		return tmp, nil
 	} else {
@@ -99,10 +107,15 @@ func (t *TopicModel) GetAll(page, limit int) ([]*TopicModel, error) {
 	}
 }
 
-func (t *TopicModel) GetCount() (int64, error) {
-	sqlstr := "SELECT count(0) FROM `topics` WHERE flag=1"
+func (t *TopicModel) GetCount(lang string) (int64, error) {
+	sqlstr := "SELECT count(0) FROM `topics` WHERE flag=1 "
+	args := make([]interface{}, 0)
+	if len(lang) > 0 {
+		sqlstr += " and lang=?"
+		args = append(args, lang)
+	}
 	var count int64
-	result := t.Raw(sqlstr).First(&count)
+	result := t.Raw(sqlstr, args...).First(&count)
 	if result.Error == nil {
 		return count, nil
 	} else {

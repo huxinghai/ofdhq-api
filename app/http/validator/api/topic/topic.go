@@ -11,6 +11,7 @@ import (
 )
 
 type List struct {
+	Lang string `form:"lang" json:"lang"`
 	common_data_type.Page
 }
 

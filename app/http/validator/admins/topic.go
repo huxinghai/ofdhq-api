@@ -12,6 +12,7 @@ import (
 )
 
 type AdminTopicCreate struct {
+	Lang  string `form:"lang" json:"lang" binding:"required,min=1"`
 	Title string `form:"title" json:"title" binding:"required,min=1"`
 	Body  string `form:"body" json:"body" binding:"required,min=1"`
 }

@@ -18,17 +18,18 @@ type Topic struct {
 }
 
 func (t *Topic) GetListByCategoryAndShowType(ctx *gin.Context) {
+	lang := ctx.GetString(consts.ValidatorPrefix + "lang")
 	page := int(ctx.GetFloat64(consts.ValidatorPrefix + "page"))
 	pageSize := int(ctx.GetFloat64(consts.ValidatorPrefix + "limit"))
 
-	list, err := topic.CreateTopicFactory().GetAllList(page, pageSize)
+	list, err := topic.CreateTopicFactory().GetAllListByLang(lang, page, pageSize)
 	if err != nil {
 		variable.ZapLog.Error("查询数据失败", zap.Error(err))
 		response.Fail(ctx, consts.TopicGetListErrorCode, consts.TopicGetListErrorMsg, "")
 		return
 	}
 
-	totalCount, err := topic.CreateTopicFactory().GetCount()
+	totalCount, err := topic.CreateTopicFactory().GetCountByLang(lang)
 	if err != nil {
 		variable.ZapLog.Error("查询数据失败", zap.Error(err))
 		response.Fail(ctx, consts.TopicGetListErrorCode, consts.TopicGetListErrorMsg, "")
@@ -44,6 +45,7 @@ func (t *Topic) GetListByCategoryAndShowType(ctx *gin.Context) {
 		result = append(result, &models.Topic{
 			Topic: &models.TopicBasic{
 				ID:          l.Id,
+				Lang:        l.Lang,
 				Title:       l.Title,
 				Body:        l.Body,
 				BodyHtml:    html,

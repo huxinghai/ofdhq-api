@@ -13,6 +13,7 @@ type User struct {
 
 type TopicBasic struct {
 	ID          int64  `json:"id"`
+	Lang        string `json:"lang"`
 	Title       string `json:"title"` // 标题
 	Body        string `json:"body"`  // 内容
 	BodyHtml    string `json:"body_html"`
