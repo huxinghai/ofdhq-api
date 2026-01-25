@@ -37,6 +37,7 @@ type AdminTopicList struct {
 
 func (l AdminTopicList) CheckParams(ctx *gin.Context) {
 	l.Page.SetDefault()
+	l.Page.Limit = 100
 	if err := ctx.ShouldBind(&l); err != nil {
 		response.ValidatorError(ctx, err)
 		return
