@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"ofdhq-api/app/global/consts"
 	"ofdhq-api/app/global/variable"
 	"ofdhq-api/app/http/controller/api/models"
@@ -21,6 +22,8 @@ func (t *Topic) GetListByCategoryAndShowType(ctx *gin.Context) {
 	lang := ctx.GetString(consts.ValidatorPrefix + "lang")
 	page := int(ctx.GetFloat64(consts.ValidatorPrefix + "page"))
 	pageSize := int(ctx.GetFloat64(consts.ValidatorPrefix + "limit"))
+
+	fmt.Printf("========== %v,%v,%v \n", lang, page, pageSize)
 
 	list, err := topic.CreateTopicFactory().GetAllListByLang(lang, page, pageSize)
 	if err != nil {
