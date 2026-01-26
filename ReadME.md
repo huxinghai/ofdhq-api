@@ -18,4 +18,6 @@ kill -2 pid
 ```
 
 
-git@github.com:huxinghai/ofdhq-api.git
+API: git@github.com:huxinghai/ofdhq-api.git
+C端：git@gitee.com:mingruiwei/ofd-nuxt-web.git
+管理后台：
