@@ -148,10 +148,10 @@ Captcha:
 
 
 Aliyun:
-  access_key_id: ******
-  access_key_secret: ************
-  bucket: ******
-  bucketweb: *****
-  area: cn-hangzhou
-  host: https://***.oss-cn-hangzhou.aliyuncs.com
-  web_host: https://***.oss-cn-hangzhou.aliyuncs.com
+  access_key_id: "******"
+  access_key_secret: "************"
+  bucket: "******"
+  bucketweb: "*****"
+  area: "cn-hangzhou"
+  host: "https://***.oss-cn-hangzhou.aliyuncs.com"
+  web_host: "https://***.oss-cn-hangzhou.aliyuncs.com"
