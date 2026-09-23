@@ -1,9 +1,19 @@
 package test
 
 import (
+	"bytes"
+	"crypto/aes"
+	"crypto/cipher"
+	"encoding/base64"
+	"encoding/json"
+	"flag"
 	"fmt"
+	"io"
+	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"testing"
 	"time"
 
@@ -13,13 +23,18 @@ import (
 	util "github.com/bytedance/douyin-openapi-util-go/client"
 )
 
+// 解决默认-test.fullpath=true 导致的测试用例失败问题
+func init() {
+	flag.Bool("test.fullpath", false, "")
+}
+
 // 抖音开放平台 SDK 集成测试，调用真实接口，凭证通过环境变量提供，缺少时自动跳过：
 //
 //	DOUYIN_CLIENT_KEY / DOUYIN_CLIENT_SECRET   开放平台应用的 AppID(client key) / AppSecret
 //	DOUYIN_OPEN_ID                             (视频相关接口需要) 授权用户的 open_id
 //	DOUYIN_VIDEO_FILE                          (可选) 本地视频文件路径，用于上传+发布测试
 //	DOUYIN_ORDER_ID                            (可选) 订单号，用于订单详情测试
-//	DOUYIN_ACCOUNT_ID                          订单查询用 account_id（Hermes 交易订单查询必填）
+//	DOUYIN_ACCOUNT_ID                          订单查询用 account_id（Hermes / Goodlife 交易订单查询必填）
 //
 // 运行示例：
 //	DOUYIN_CLIENT_KEY=xx DOUYIN_CLIENT_SECRET=xx DOUYIN_OPEN_ID=xx DOUYIN_ACCESS_TOKEN=xx \
@@ -194,12 +209,14 @@ func TestDouyinHermesTradeOrderQuery(t *testing.T) {
 		t.Skip("缺少环境变量 DOUYIN_ACCOUNT_ID")
 	}
 
+	startTime := time.Date(2026, 06, 01, 0, 0, 0, 0, time.Now().Location())
+
 	resp, err := cli.HermesTradeOrderQuery(&client.HermesTradeOrderQueryRequest{
 		AccessToken:          tea.String(accessToken),
 		AccountId:            tea.String(accountID),
-		CreateOrderStartTime: tea.Int64(time.Now().Add(-7 * 24 * time.Hour).Unix()),
-		CreateOrderEndTime:   tea.Int64(time.Now().Unix()),
-		PageNum:              tea.Int32(1),
+		CreateOrderStartTime: tea.Int64(startTime.Unix()),
+		CreateOrderEndTime:   tea.Int64(startTime.AddDate(0, 1, 0).Unix()),
+		PageNum:              tea.Int32(101),
 		PageSize:             tea.Int32(10),
 	})
 	if err != nil {
@@ -221,6 +238,113 @@ func TestDouyinHermesTradeOrderQuery(t *testing.T) {
 				i, tea.StringValue(o.OrderId), tea.Int32Value(o.PayAmount),
 				tea.Int32Value(o.SkuNum), tea.Int64Value(o.CreateOrderTime), tea.Int64Value(o.PayTime))
 		}
+	}
+}
+
+// 7. 查询本地生活交易订单（goodlife /goodlife/v1/trade/order/query/，account_id 必填）
+func TestDouyinTradeOrderQuery(t *testing.T) {
+	cli := newDouyinClient(t)
+	accessToken := autoAccessToken(t, cli)
+	accountID := os.Getenv("DOUYIN_ACCOUNT_ID")
+	if accountID == "" {
+		t.Skip("缺少环境变量 DOUYIN_ACCOUNT_ID")
+	}
+
+	startTime := time.Date(2026, 06, 01, 0, 0, 0, 0, time.Now().Location())
+
+	resp, err := cli.TradeOrderQuery(&client.TradeOrderQueryRequest{
+		AccessToken:          tea.String(accessToken),
+		AccountId:            tea.String(accountID),
+		CreateOrderStartTime: tea.Int64(startTime.Unix()),
+		CreateOrderEndTime:   tea.Int64(startTime.AddDate(0, 1, 0).Unix()),
+		PageNum:              tea.Int32(1),
+		PageSize:             tea.Int32(100),
+		OrderStatus:          tea.Int32(1),
+		UpdateOrderEndTime:   tea.Int64(1),
+		UpdateOrderStartTime: tea.Int64(1),
+	})
+	if err != nil {
+		t.Fatalf("TradeOrderQuery: %v", err)
+	}
+	var code *int32
+	var desc *string
+	if resp.Extra != nil {
+		code, desc = resp.Extra.ErrorCode, resp.Extra.Description
+	}
+	checkResp(t, "查询交易订单", code, desc)
+	if resp.Data == nil || len(resp.Data.Orders) == 0 {
+		// 空数据时打印完整响应便于排查（配合 DEBUG=tea 可看请求 URL / 响应状态）
+		t.Logf("未返回订单, 完整响应: %s", resp.GoString())
+		return
+	}
+	if resp.Data.Page != nil {
+		t.Logf("总订单数=%d page=%d/%d", tea.Int64Value(resp.Data.Page.Total),
+			tea.Int32Value(resp.Data.Page.PageNum), tea.Int32Value(resp.Data.Page.PageSize))
+	}
+	for i, o := range resp.Data.Orders {
+		t.Logf("[%d] order_id=%s sku=%s pay_amount=%d status=%d count=%d create_time=%d pay_time=%d",
+			i, tea.StringValue(o.OrderId), tea.StringValue(o.SkuName), tea.Int32Value(o.PayAmount),
+			tea.Int32Value(o.OrderStatus), tea.Int32Value(o.Count),
+			tea.Int64Value(o.CreateOrderTime), tea.Int64Value(o.PayTime))
+	}
+}
+
+// 8. 直连调用交易订单查询（绕过 SDK）：
+// SDK 的 TradeOrderQuery 会把未设置的字段以零值拼进 query —— nil *int64 经 tea.Int64Value
+// 变成 0，StringifyMapValue 只过滤 nil，因此 URL 固定带 update_order_start_time=0&
+// update_order_end_time=0，与 create_order_* 时间窗冲突导致查不到数据。
+// 这里自己拼 query，只发送显式设置的参数。
+func TestDouyinTradeOrderQueryDirect(t *testing.T) {
+	cli := newDouyinClient(t)
+	accessToken := autoAccessToken(t, cli)
+	accountID := os.Getenv("DOUYIN_ACCOUNT_ID")
+	if accountID == "" {
+		t.Skip("缺少环境变量 DOUYIN_ACCOUNT_ID")
+	}
+
+	startTime := time.Date(2026, 06, 01, 0, 0, 0, 0, time.Now().Location())
+
+	q := url.Values{}
+	q.Set("account_id", accountID)
+	q.Set("create_order_start_time", strconv.FormatInt(startTime.Unix(), 10))
+	q.Set("create_order_end_time", strconv.FormatInt(startTime.AddDate(0, 1, 0).Unix(), 10))
+	q.Set("page_num", "1")
+	q.Set("page_size", "10")
+
+	reqURL := "https://open.douyin.com/goodlife/v1/trade/order/query/?" + q.Encode()
+	t.Logf("请求 URL: %s", reqURL)
+	req, err := http.NewRequest(http.MethodGet, reqURL, nil)
+	if err != nil {
+		t.Fatalf("NewRequest: %v", err)
+	}
+	req.Header.Set("access-token", accessToken)
+
+	httpResp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("Do: %v", err)
+	}
+	defer httpResp.Body.Close()
+	body, err := io.ReadAll(httpResp.Body)
+	if err != nil {
+		t.Fatalf("ReadAll: %v", err)
+	}
+	t.Logf("HTTP %d, body=%s", httpResp.StatusCode, body)
+
+	var resp client.TradeOrderQueryResponse
+	if err := json.Unmarshal(body, &resp); err != nil {
+		t.Fatalf("Unmarshal: %v", err)
+	}
+	var code *int32
+	var desc *string
+	if resp.Extra != nil {
+		code, desc = resp.Extra.ErrorCode, resp.Extra.Description
+	}
+	checkResp(t, "直连查询交易订单", code, desc)
+	for i, o := range resp.Data.Orders {
+		t.Logf("[%d] order_id=%s sku=%s pay_amount=%d status=%d count=%d create_time=%d pay_time=%d",
+			i, tea.StringValue(o.OrderId), tea.StringValue(o.SkuName), tea.Int32Value(o.PayAmount),
+			tea.Int32Value(o.OrderStatus), tea.Int32Value(o.Count),
+			tea.Int64Value(o.CreateOrderTime), tea.Int64Value(o.PayTime))
 	}
 }
 
@@ -282,4 +406,71 @@ func TestDouyinUploadAndCreateVideo(t *testing.T) {
 	if cr.Data != nil {
 		t.Logf("item_id=%s", tea.StringValue(cr.Data.ItemId))
 	}
+}
+
+func TestAesDecrypt(t *testing.T) {
+	// {
+	// 	"name": "",
+	// 	"phone": "149****7100",
+	// 	"phone_encrypt": "MDUGJWk2ctOamW3gwEd4YA=="
+	// }
+	phone, err := AesDecrypt("MDUGJWk2ctOamW3gwEd4YA==", "30d07a13646ecb6d5b5604fa6d1203ee")
+	fmt.Printf("电话号码:%v, %v \n", string(phone), err)
+}
+
+// AesDecrypt 解密函数
+// encryptedStr：base64后的密文
+// secret：appid/client_key对应的client_secret
+// return: []byte 明文
+func AesDecrypt(encryptedStr string, secret string) ([]byte, error) {
+	// 加密字符串进行base64解码
+	decodeBytes, err := base64.StdEncoding.DecodeString(encryptedStr)
+	if err != nil {
+		return nil, err
+	}
+	key, iv := parseSecret(secret)
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+	blockSize := block.BlockSize()
+	blockMode := cipher.NewCBCDecrypter(block, iv[:blockSize])
+	origData := make([]byte, len(decodeBytes))
+	blockMode.CryptBlocks(origData, decodeBytes)
+	origData = PKCS5UnPadding(origData)
+	return origData, nil
+}
+
+// parseSecret 将secret解析为key和iv
+func parseSecret(secret string) ([]byte, []byte) {
+	// secret对齐为32位
+	secret = cutSecret(secret)
+	secret = fillSecret(secret)
+	key, iv := secret, secret[16:]
+	return []byte(key), []byte(iv)
+}
+func fillSecret(secret string) string {
+	if len(secret) >= 32 {
+		return secret
+	}
+	rightCnt := (32 - len(secret)) / 2
+	leftCnt := 32 - len(secret) - rightCnt
+	var byt bytes.Buffer
+	byt.Write(bytes.Repeat([]byte("#"), leftCnt))
+	byt.WriteString(secret)
+	byt.Write(bytes.Repeat([]byte("#"), rightCnt))
+	return byt.String()
+}
+func cutSecret(secret string) string {
+	if len(secret) <= 32 {
+		return secret
+	}
+	rightCnt := (len(secret) - 32) / 2
+	leftCnt := len(secret) - 32 - rightCnt
+	return secret[leftCnt : 32+leftCnt]
+}
+func PKCS5UnPadding(origData []byte) []byte {
+	length := len(origData)
+	unpadding := int(origData[length-1])
+	return origData[:(length - unpadding)]
 }
