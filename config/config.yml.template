@@ -155,3 +155,9 @@ Aliyun:
   area: "cn-hangzhou"
   host: "https://***.oss-cn-hangzhou.aliyuncs.com"
   web_host: "https://***.oss-cn-hangzhou.aliyuncs.com"
+
+# 抖音开放平台
+Douyin:
+  ClientKey: "xxx"        # 开放平台应用 client_key(AppID)
+  ClientSecret: "xxxx"  # 开放平台应用 client_secret(AppSecret)
+  AccountId: "7324904536798152719"        # 交易订单查询(goodlife)使用的 account_id

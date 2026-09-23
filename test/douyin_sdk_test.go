@@ -21,11 +21,21 @@ import (
 	credential "github.com/bytedance/douyin-openapi-credential-go/client"
 	"github.com/bytedance/douyin-openapi-sdk-go/client"
 	util "github.com/bytedance/douyin-openapi-util-go/client"
+
+	"ofdhq-api/app/global/variable"
+	douyin "ofdhq-api/app/utils/douyin"
+	"ofdhq-api/app/utils/yml_config"
 )
 
 // 解决默认-test.fullpath=true 导致的测试用例失败问题
 func init() {
 	flag.Bool("test.fullpath", false, "")
+}
+
+// app/utils/douyin 封装依赖全局配置指针（正常由 bootstrap 初始化），测试进程里手动初始化
+func TestMain(m *testing.M) {
+	variable.ConfigYml = yml_config.CreateYamlFactory()
+	os.Exit(m.Run())
 }
 
 // 抖音开放平台 SDK 集成测试，调用真实接口，凭证通过环境变量提供，缺少时自动跳过：
@@ -340,6 +350,44 @@ func TestDouyinTradeOrderQueryDirect(t *testing.T) {
 		code, desc = resp.Extra.ErrorCode, resp.Extra.Description
 	}
 	checkResp(t, "直连查询交易订单", code, desc)
+	for i, o := range resp.Data.Orders {
+		t.Logf("[%d] order_id=%s sku=%s pay_amount=%d status=%d count=%d create_time=%d pay_time=%d",
+			i, tea.StringValue(o.OrderId), tea.StringValue(o.SkuName), tea.Int32Value(o.PayAmount),
+			tea.Int32Value(o.OrderStatus), tea.Int32Value(o.Count),
+			tea.Int64Value(o.CreateOrderTime), tea.Int64Value(o.PayTime))
+	}
+}
+
+// 9. 走 app/utils/douyin 封装查询交易订单：
+// 配置读 config/config.yml 的 Douyin.ClientKey/ClientSecret/AccountId，
+// access_token 走 Redis 缓存（未命中自动获取并回写）。
+// 将真实凭证填入 config.yml 后运行：go test -v -run TestDouyinTradeOrderQueryUtil ./test/
+func TestDouyinTradeOrderQueryUtil(t *testing.T) {
+	if variable.ConfigYml.GetString("Douyin.ClientKey") == "" ||
+		variable.ConfigYml.GetString("Douyin.ClientKey") == "douyin_client_key" {
+		t.Skip("config.yml 未配置真实的 Douyin.ClientKey")
+	}
+
+	startTime := time.Date(2026, 06, 01, 0, 0, 0, 0, time.Now().Location())
+	resp, err := douyin.TradeOrderQuery(&douyin.TradeOrderQueryParam{
+		CreateOrderStartTime: startTime.Unix(),
+		CreateOrderEndTime:   startTime.AddDate(0, 1, 0).Unix(),
+		PageNum:              1,
+		PageSize:             10,
+	})
+	if err != nil {
+		t.Fatalf("douyin.TradeOrderQuery: %v", err)
+	}
+	var code *int32
+	var desc *string
+	if resp.Extra != nil {
+		code, desc = resp.Extra.ErrorCode, resp.Extra.Description
+	}
+	checkResp(t, "封装查询交易订单", code, desc)
+	if resp.Data != nil && resp.Data.Page != nil {
+		t.Logf("总订单数=%d page=%d/%d", tea.Int64Value(resp.Data.Page.Total),
+			tea.Int32Value(resp.Data.Page.PageNum), tea.Int32Value(resp.Data.Page.PageSize))
+	}
 	for i, o := range resp.Data.Orders {
 		t.Logf("[%d] order_id=%s sku=%s pay_amount=%d status=%d count=%d create_time=%d pay_time=%d",
 			i, tea.StringValue(o.OrderId), tea.StringValue(o.SkuName), tea.Int32Value(o.PayAmount),
