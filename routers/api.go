@@ -3,8 +3,10 @@ package routers
 import (
 	"ofdhq-api/app/global/consts"
 	"ofdhq-api/app/global/variable"
+	controllerApi "ofdhq-api/app/http/controller/api"
 	"ofdhq-api/app/http/middleware/cors"
 	validatorFactory "ofdhq-api/app/http/validator/core/factory"
+	"ofdhq-api/app/utils/douyin"
 	"ofdhq-api/app/utils/gin_release"
 
 	"github.com/gin-contrib/pprof"
@@ -43,6 +45,16 @@ func InitApiRouter() *gin.Engine {
 
 		vApi.POST("customer/create", validatorFactory.Create(consts.ValidatorPrefix+"CustomerCreate"))
 		vApi.POST("upload/file", validatorFactory.Create(consts.ValidatorPrefix+"UserUploadFile"))
+
+		//----------------------- 抖音本地生活 SPI 回调（免登录态，验签中间件保障） ----------------------
+		// 回调地址要求 https，配置到抖音来客开放平台的完整形如：https://<域名>/api/v1/douyin/spi/...
+		douyinSpi := vApi.Group("douyin/spi/", douyin.SpiSignVerify())
+		{
+			douyinSpi.POST("presale_order/create", (&controllerApi.DouyinSpi{}).CreatePresaleOrder) // 预售券创建预售订单
+			douyinSpi.POST("book_order/create", (&controllerApi.DouyinSpi{}).CreateBookOrder)     // 预售券创建预约订单
+			douyinSpi.POST("order/cancel", (&controllerApi.DouyinSpi{}).OrderCancel)              // 预售券订单取消通知
+			douyinSpi.POST("order/refund_notify", (&controllerApi.DouyinSpi{}).OrderRefundNotify) // 预售券退款通知
+		}
 
 		//----------------------- 需要登录态接口 ----------------------
 		// vApi.Use(authorization.CheckTokenAuth())
