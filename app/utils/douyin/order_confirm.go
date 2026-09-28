@@ -7,15 +7,21 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"ofdhq-api/app/global/variable"
 
 	"github.com/alibabacloud-go/tea/tea"
+	"go.uber.org/zap"
 )
 
 // 旅行社交易确认接单接口（我方 -> 抖音，OpenAPI）
 // POST /goodlife/v1/trip/trade/travelagency/order/confirm/
 // 抖音侧通知支付成功后，需在商品设置的接单时间内异步确认（超时会拒单），
 // 官方建议对确认接口异步重试 3 次、间隔 5s。
-const travelAgencyOrderConfirmURL = "https://open.douyin.com/goodlife/v1/trip/trade/travelagency/order/confirm/"
+// URL 声明为 var、取 token 走 getAccessToken 注入点，均为单测替换点（默认行为不变）
+var (
+	travelAgencyOrderConfirmURL = "https://open.douyin.com/goodlife/v1/trip/trade/travelagency/order/confirm/"
+	getAccessToken              = GetAccessToken
+)
 
 // 确认结果
 const (
@@ -51,10 +57,10 @@ type travelAgencyOrderConfirmReq struct {
 
 type travelAgencyOrderConfirmResp struct {
 	Data *struct {
-		ErrorCode  *int32  `json:"error_code"`
+		ErrorCode   *int32  `json:"error_code"`
 		Description *string `json:"description"`
-		OrderID    *string `json:"order_id"`
-		OrderOutID *string `json:"order_out_id"`
+		OrderID     *string `json:"order_id"`
+		OrderOutID  *string `json:"order_out_id"`
 	} `json:"data"`
 	Extra *struct {
 		ErrorCode   *int32  `json:"error_code"`
@@ -93,7 +99,7 @@ func TravelAgencyOrderConfirm(p *TravelAgencyOrderConfirmParam) error {
 		return errors.Join(err, fmt.Errorf("douyin TravelAgencyOrderConfirm 序列化请求失败"))
 	}
 
-	accessToken, err := GetAccessToken()
+	accessToken, err := getAccessToken()
 	if err != nil {
 		return err
 	}
@@ -114,6 +120,9 @@ func TravelAgencyOrderConfirm(p *TravelAgencyOrderConfirmParam) error {
 	if err != nil {
 		return errors.Join(err, fmt.Errorf("douyin TravelAgencyOrderConfirm 读取响应失败"))
 	}
+
+	variable.ZapLog.Info("TravelAgencyOrderConfirm", zap.String("body", string(body)))
+
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("douyin TravelAgencyOrderConfirm HTTP %d, body=%s", resp.StatusCode, body)
 	}

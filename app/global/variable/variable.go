@@ -6,7 +6,7 @@ import (
 	"ofdhq-api/app/utils/snow_flake/snowflake_interf"
 	"ofdhq-api/app/utils/yml_config/ymlconfig_interf"
 	"os"
-	"strings"
+	"path/filepath"
 	"time"
 
 	"github.com/casbin/casbin/v2"
@@ -61,12 +61,10 @@ var (
 func init() {
 	// 1.初始化程序根目录
 	if curPath, err := os.Getwd(); err == nil {
-		// 路径进行处理，兼容单元测试程序程序启动时的奇怪路径
-		if len(os.Args) > 1 && strings.HasPrefix(os.Args[1], "-test") {
-			BasePath = strings.Replace(strings.Replace(curPath, `\test`, "", 1), `/test`, "", 1)
-		} else {
-			BasePath = curPath
-		}
+		// 路径进行处理，兼容单元测试程序启动时的奇怪路径：
+		// go test 会把工作目录切到被测包目录（如 test/、app/utils/douyin/），
+		// 统一向上回溯到包含 config/config.yml 的目录作为项目根
+		BasePath = locateProjectRoot(curPath)
 	} else {
 		log.Fatal(my_errors.ErrorsBasePath)
 	}
@@ -76,6 +74,23 @@ func init() {
 		log.Fatal("Error loading location:", err)
 		return
 	}
+}
+
+// locateProjectRoot 从 start 向上逐级查找包含 config/config.yml 的目录作为项目根，
+// 找不到时原样返回 start（保持旧行为，由后续配置初始化暴露错误）
+func locateProjectRoot(start string) string {
+	dir := start
+	for i := 0; i < 10; i++ {
+		if _, err := os.Stat(filepath.Join(dir, "config", "config.yml")); err == nil {
+			return dir
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			break
+		}
+		dir = parent
+	}
+	return start
 }
 
 func NowTimeSH() time.Time {
