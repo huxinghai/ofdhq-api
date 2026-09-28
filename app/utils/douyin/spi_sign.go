@@ -103,7 +103,23 @@ func VerifySPIRequest(r *http.Request, clientSecret string) error {
 	return fmt.Errorf("douyin SPI 请求缺少签名(x-life-sign / sign 均为空)")
 }
 
-// SpiSignVerify gin 中间件：校验 SPI 回调签名 + client_key。
+// dumpHeaders 汇总请求头为 "Key: Value; Key: Value" 形式，用于日志打印
+func dumpHeaders(h http.Header) string {
+	var sb strings.Builder
+	for k, vs := range h {
+		for _, v := range vs {
+			if sb.Len() > 0 {
+				sb.WriteString("; ")
+			}
+			sb.WriteString(k)
+			sb.WriteString(": ")
+			sb.WriteString(v)
+		}
+	}
+	return sb.String()
+}
+
+// SpiSignVerify gin 中间件：记录请求日志 + 校验 SPI 回调签名 + client_key。
 // 验签失败按抖音 SPI 出参格式返回 error_code=3000007(操作无权限) 并 Abort。
 func SpiSignVerify() gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -123,6 +139,21 @@ func SpiSignVerify() gin.HandlerFunc {
 				return
 			}
 		}
+
+		// 打印回调的参数与头部信息，便于联调排查（读取后还原 body，不影响后续验签与绑定）
+		body, err := io.ReadAll(c.Request.Body)
+		if err != nil {
+			variable.ZapLog.Warn("douyin SPI 读取 body 失败", zap.Error(err))
+		}
+		c.Request.Body = io.NopCloser(bytes.NewReader(body))
+		variable.ZapLog.Info("douyin SPI 回调请求",
+			zap.String("method", c.Request.Method),
+			zap.String("path", c.Request.URL.Path),
+			zap.String("query", c.Request.URL.RawQuery),
+			zap.String("client_ip", c.ClientIP()),
+			zap.String("headers", dumpHeaders(c.Request.Header)),
+			zap.String("body", string(body)),
+		)
 
 		if err := VerifySPIRequest(c.Request, clientSecret); err != nil {
 			variable.ZapLog.Warn("douyin SPI 验签失败",

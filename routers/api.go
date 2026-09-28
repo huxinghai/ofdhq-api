@@ -54,6 +54,7 @@ func InitApiRouter() *gin.Engine {
 			douyinSpi.POST("book_order/create", (&controllerApi.DouyinSpi{}).CreateBookOrder)     // 预售券创建预约订单
 			douyinSpi.POST("order/cancel", (&controllerApi.DouyinSpi{}).OrderCancel)              // 预售券订单取消通知
 			douyinSpi.POST("order/refund_notify", (&controllerApi.DouyinSpi{}).OrderRefundNotify) // 预售券退款通知
+			douyinSpi.POST("order/pay_notify", (&controllerApi.DouyinSpi{}).OrderPayNotify)       // 预售券支付通知(支付前创单模式)
 		}
 
 		//----------------------- 需要登录态接口 ----------------------

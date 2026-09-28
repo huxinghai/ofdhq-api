@@ -27,6 +27,7 @@ const (
 const (
 	DouyinNoticeTypeCancel int16 = 1 // 预售券订单取消通知(travel_spot.order.cancel_apply)
 	DouyinNoticeTypeRefund int16 = 2 // 预售券退款通知(travel_spot.order.refund_notify)
+	DouyinNoticeTypePay    int16 = 3 // 预售券支付通知(travel_spot.order.pay_notify)
 )
 
 func douyinNow() string {
@@ -109,6 +110,11 @@ func (t *DouyinPresaleOrderModel) UpdateStatusByOrderId(orderId string, status i
 	return t.Exec("UPDATE `douyin_presale_orders` SET `status` = ? WHERE `order_id` = ?", status, orderId).Error
 }
 
+// UpdatePayInfoByOrderId 支付通知联动回填支付信息（支付前创单模式，创单时无支付信息）
+func (t *DouyinPresaleOrderModel) UpdatePayInfoByOrderId(orderId string, payTimeUnix int64, orderSource int16) error {
+	return t.Exec("UPDATE `douyin_presale_orders` SET `pay_time_unix` = ?, `order_source` = ? WHERE `order_id` = ?", payTimeUnix, orderSource, orderId).Error
+}
+
 // ------------------------- 预约订单（biz_type 3012） -------------------------
 
 type DouyinBookOrderModel struct {
@@ -176,15 +182,20 @@ func (t *DouyinBookOrderModel) UpdateStatusByOrderId(orderId string, status int1
 	return t.Exec("UPDATE `douyin_book_orders` SET `status` = ? WHERE `order_id` = ?", status, orderId).Error
 }
 
-// --------------------- 取消/退款通知流水（SPI 通知类） ---------------------
+// UpdatePayInfoByOrderId 支付通知联动回填支付信息（支付前创单模式，创单时无支付信息）
+func (t *DouyinBookOrderModel) UpdatePayInfoByOrderId(orderId string, payTimeUnix int64, orderSource int16) error {
+	return t.Exec("UPDATE `douyin_book_orders` SET `pay_time_unix` = ?, `order_source` = ? WHERE `order_id` = ?", payTimeUnix, orderSource, orderId).Error
+}
+
+// --------------------- 取消/退款/支付通知流水（SPI 通知类） ---------------------
 
 type DouyinOrderNoticeModel struct {
 	BaseModel
 	DedupKey       string          `json:"dedup_key"`       // 幂等键
-	NoticeType     int16           `json:"notice_type"`     // 1取消通知 2退款通知
+	NoticeType     int16           `json:"notice_type"`     // 1取消通知 2退款通知 3支付通知
 	OrderId        string          `json:"order_id"`        // 抖音侧订单号
 	OrderOutId     string          `json:"order_out_id"`    // 第三方订单 ID
-	BizType        int32           `json:"biz_type"`        // 取消通知携带：3011预售券 3012预约单
+	BizType        int32           `json:"biz_type"`        // 取消/支付通知携带：3011预售券 3012预约单
 	SubType        int16           `json:"sub_type"`        // 取消:1支付前2支付后3外部原因；退款:1订单退款2补差价退款
 	NotifyTimeUnix int64           `json:"notify_time_unix"` // 取消:cancel_order_time_unix；退款:refund_time_unix（秒）
 	PayAmount      int64           `json:"pay_amount"`      // 订单实付金额（分，退款通知）
@@ -225,6 +236,20 @@ func UpdateDouyinOrderStatusByOrderId(orderId string, status int16) {
 	if presale := CreateDouyinPresaleOrderFactory(); presale.DB != nil {
 		if err := presale.UpdateStatusByOrderId(orderId, status); err != nil {
 			variable.ZapLog.Warn("douyin 通知联动更新预售订单状态失败", zap.String("order_id", orderId), zap.Error(err))
+		}
+	}
+}
+
+// UpdateDouyinOrderPayInfo 支付通知联动回填订单支付信息（预约单/预售单哪个存在更新哪个）
+func UpdateDouyinOrderPayInfo(orderId string, payTimeUnix int64, orderSource int16) {
+	if book := CreateDouyinBookOrderFactory(); book.DB != nil {
+		if err := book.UpdatePayInfoByOrderId(orderId, payTimeUnix, orderSource); err != nil {
+			variable.ZapLog.Warn("douyin 支付通知联动回填预约订单支付信息失败", zap.String("order_id", orderId), zap.Error(err))
+		}
+	}
+	if presale := CreateDouyinPresaleOrderFactory(); presale.DB != nil {
+		if err := presale.UpdatePayInfoByOrderId(orderId, payTimeUnix, orderSource); err != nil {
+			variable.ZapLog.Warn("douyin 支付通知联动回填预售订单支付信息失败", zap.String("order_id", orderId), zap.Error(err))
 		}
 	}
 }

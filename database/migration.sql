@@ -121,17 +121,17 @@ CREATE TABLE IF NOT EXISTS `douyin_book_orders` (
   KEY `idx_dbo_created_at` (`created_at`)
 ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COMMENT='抖音预约订单';
 
--- 取消/退款通知流水（SPI: travel_spot.order.cancel_apply / travel_spot.order.refund_notify）
+-- 取消/退款/支付通知流水（SPI: travel_spot.order.cancel_apply / travel_spot.order.refund_notify / travel_spot.order.pay_notify）
 CREATE TABLE IF NOT EXISTS `douyin_order_notices` (
   `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-  `dedup_key` VARCHAR(128) NOT NULL COMMENT '幂等键:cancel:{order_id}:{cancel_order_time_unix} / refund:{order_id}:{after_sale_id}:{refund_time_unix}',
-  `notice_type` TINYINT NOT NULL COMMENT '通知类型:1取消通知2退款通知',
+  `dedup_key` VARCHAR(128) NOT NULL COMMENT '幂等键:cancel:{order_id}:{cancel_order_time_unix} / refund:{order_id}:{after_sale_id}:{refund_time_unix} / pay:{order_id}:{pay_time_unix}',
+  `notice_type` TINYINT NOT NULL COMMENT '通知类型:1取消通知2退款通知3支付通知',
   `order_id` VARCHAR(64) NOT NULL COMMENT '抖音侧订单号',
   `order_out_id` VARCHAR(64) NOT NULL DEFAULT '' COMMENT '第三方订单ID',
-  `biz_type` INT NOT NULL DEFAULT 0 COMMENT '取消通知携带:3011预售券3012预约单',
+  `biz_type` INT NOT NULL DEFAULT 0 COMMENT '取消/支付通知携带:3011预售券3012预约单',
   `sub_type` TINYINT NOT NULL DEFAULT 0 COMMENT '取消:1支付前2支付后3外部原因;退款:1订单退款2补差价退款',
-  `notify_time_unix` INT NOT NULL DEFAULT 0 COMMENT '取消:cancel_order_time_unix;退款:refund_time_unix(秒)',
-  `pay_amount` BIGINT NOT NULL DEFAULT 0 COMMENT '订单实付金额(分,退款通知)',
+  `notify_time_unix` INT NOT NULL DEFAULT 0 COMMENT '取消:cancel_order_time_unix;退款:refund_time_unix;支付:pay_time_unix(秒)',
+  `pay_amount` BIGINT NOT NULL DEFAULT 0 COMMENT '订单实付金额(分,退款/支付通知)',
   `refund_amount` BIGINT NOT NULL DEFAULT 0 COMMENT '实际退款金额(分,退款通知)',
   `after_sale_id` VARCHAR(64) NOT NULL DEFAULT '' COMMENT '售后单ID(退款通知)',
   `extra` JSON NULL COMMENT '非核心字段原始报文(cancel_reason/refund_count/refund_item_list/user_refund_amount等)',
@@ -141,4 +141,4 @@ CREATE TABLE IF NOT EXISTS `douyin_order_notices` (
   UNIQUE KEY `uk_don_dedup_key` (`dedup_key`),
   KEY `idx_don_order_id` (`order_id`),
   KEY `idx_don_created_at` (`created_at`)
-) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COMMENT='抖音订单取消/退款通知流水';
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COMMENT='抖音订单取消/退款/支付通知流水';

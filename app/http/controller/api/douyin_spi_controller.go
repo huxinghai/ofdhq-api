@@ -304,3 +304,57 @@ func (t *DouyinSpi) OrderRefundNotify(c *gin.Context) {
 	model.UpdateDouyinOrderStatusByOrderId(req.OrderId, model.DouyinOrderStatusRefunded)
 	spiResp(c, gin.H{"error_code": 0, "description": "success"})
 }
+
+// ------------------- SPI 预售券支付通知 travel_spot.order.pay_notify -------------------
+
+type douyinPayNotifyReq struct {
+	// 必填字段
+	OrderId     string `json:"order_id"`
+	BizType     int32  `json:"biz_type"`      // 3011预售券 3012预约单
+	PayAmount   int64  `json:"pay_amount"`    // 用户实付（分）
+	PayTimeUnix int64  `json:"pay_time_unix"` // 秒
+	OrderSource int16  `json:"order_source"`  // 1抖音 2抖省省 3豆包
+	// 非必填
+	OrderOutId string `json:"order_out_id"`
+}
+
+// OrderPayNotify 支付结果通知（抖音 -> 第三方）。
+// 注意：供应商交易模式为支付后创单时抖音不会调用该 SPI；
+// 支付前创单模式收到此通知后回填订单支付信息。
+func (t *DouyinSpi) OrderPayNotify(c *gin.Context) {
+	raw, err := readSpiBody(c)
+	if err != nil {
+		spiResp(c, gin.H{"error_code": 4000002, "description": "read body failed"})
+		return
+	}
+	var req douyinPayNotifyReq
+	if err := json.Unmarshal(raw, &req); err != nil {
+		variable.ZapLog.Warn("douyin SPI 支付通知参数解析失败", zap.Error(err))
+		spiResp(c, gin.H{"error_code": 4000002, "description": "invalid json body"})
+		return
+	}
+	if req.OrderId == "" || req.BizType == 0 || req.PayTimeUnix == 0 || req.OrderSource == 0 {
+		spiResp(c, gin.H{"error_code": 4000002, "description": "order_id/biz_type/pay_time_unix/order_source required"})
+		return
+	}
+
+	notice := &model.DouyinOrderNoticeModel{
+		DedupKey:       "pay:" + req.OrderId + ":" + strconv.FormatInt(req.PayTimeUnix, 10),
+		NoticeType:     model.DouyinNoticeTypePay,
+		OrderId:        req.OrderId,
+		OrderOutId:     req.OrderOutId,
+		BizType:        req.BizType,
+		NotifyTimeUnix: req.PayTimeUnix,
+		PayAmount:      req.PayAmount,
+		Extra:          json.RawMessage(raw),
+	}
+	if _, err := model.CreateDouyinOrderNoticeFactory().SaveDedup(notice); err != nil {
+		variable.ZapLog.Error("douyin SPI 支付通知落库失败", zap.String("order_id", req.OrderId), zap.Error(err))
+		// 系统错误返回 100，抖音侧重试；重复通知会被 dedup_key 幂等拦截
+		spiResp(c, gin.H{"error_code": 100, "description": "internal error"})
+		return
+	}
+	// 联动回填订单支付信息（幂等 UPDATE，重复通知无害）
+	model.UpdateDouyinOrderPayInfo(req.OrderId, req.PayTimeUnix, req.OrderSource)
+	spiResp(c, gin.H{"error_code": 0, "description": "success"})
+}
